@@ -1,0 +1,217 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum SaleType {
+  selfFulfillment
+  dropshipping
+}
+
+enum PlanType {
+  Basic
+  Plus
+  Custom
+}
+
+enum SubscriptionFrequency {
+  Monthly
+  Yearly
+}
+
+enum SubscriptionStatus {
+  TRIAL
+  ACTIVE
+  EXPIRED
+}
+
+model User {
+  id                  String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  clerkId             String          @unique
+  email               String          @unique
+  firstName           String?
+  lastName            String?
+  imageUrl            String?
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+
+  isPaid              Boolean         @default(false)
+  chapaSubAccountId   String?         @unique
+  saleType            SaleType?
+  isActive            Boolean         @default(false)
+  
+  subscription        Subscription[]
+  billingHistory      BillingHistory[]
+  stores              Store[]
+
+}
+
+model Subscription {
+  id                String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user              User                    @relation(fields: [userId], references: [id])
+  userId            String                  @db.Uuid
+
+  plan              Plan?                    @relation(fields: [planId], references: [id])
+  planId            String?                  @db.Uuid
+
+  pricing           Pricing?                 @relation(fields: [pricingId], references: [id])
+  pricingId         String?                  @db.Uuid
+
+  status            SubscriptionStatus      @default(TRIAL)
+
+  startDate         DateTime                
+  trialEndDate      DateTime
+  endDate           DateTime?                // Set based on frequency and payment date
+
+  billingHistories  BillingHistory[]
+
+  @@index([userId])
+  @@index([planId])
+  @@index([pricingId])
+  @@map("subscriptions")
+}
+
+model Plan {
+  id                String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name              PlanType         @unique
+  description       String?
+  features          String[]
+  pricing           Pricing[]
+
+  subscriptions     Subscription[]
+
+  @@map("plans")
+}
+
+model Pricing {
+  id                String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+
+  plan              Plan                    @relation(fields: [planId], references: [id])
+  planId            String                  @db.Uuid
+
+  frequency         SubscriptionFrequency
+  price             Float                   // Price in chosen currency (e.g., USD)
+  splitValue        Float?
+
+  subscriptions     Subscription[]
+
+  @@unique([planId, frequency])
+  @@map("pricings")
+}
+
+model BillingHistory {
+  id                String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user              User                    @relation(fields: [userId], references: [id])
+  userId            String                  @db.Uuid
+
+  subscription      Subscription            @relation(fields: [subscriptionId], references: [id])
+  subscriptionId    String                  @db.Uuid
+
+  amount            Float                   // Amount charged (e.g., based on Pricing)
+  
+  paymentDate       DateTime                @default(now())
+  paymentMethod     String                  // "Chapa"
+  transactionId     String?                 // Transaction ID from Chapa
+
+  @@index([userId])
+  @@index([subscriptionId])
+  @@map("billing_histories")
+}
+
+
+
+model Store {
+  id                String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name              String
+  description       String?
+  email             String?
+  phone             String
+  domain            String        @unique
+
+  owner             User          @relation(fields: [ownerId], references: [id])
+  ownerId           String        @db.Uuid
+
+  convexOrderIds    String[]      // Array of Convex order IDs associated with this store
+
+  logo              String?
+  favicon           String?
+  selectedTemplate  String?
+  isPublished       Boolean       @default(false)
+
+  products          Product[]
+  collections       Collection[]
+  
+  socialLinks       Json?
+
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  @@index([ownerId])
+}
+
+model Product {
+  id                  String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                String
+  description         String?
+  media               String[]     // Array of Cloudinary image IDs
+  category            String?
+  price               Float
+  comparePrice        Float?
+  profit              Float?
+  stock               Int
+  soldCount           Int          @default(0)
+  quantity            Int
+  sku                 String?      @unique
+  isPublished         Boolean      @default(false)
+
+  store               Store        @relation(fields: [storeId], references: [id])
+  storeId             String        @db.Uuid
+
+  collections         Collection[] // Many-to-Many Relationship with Collection
+
+  convexOrderItemIds  String[]     // Array of Convex order item IDs associated with this product
+
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+
+  @@index([storeId])
+}
+
+model Collection {
+  id                  String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                String
+  slug                String        @unique
+  description         String?
+  isActive            Boolean       @default(true)
+
+  store               Store          @relation(fields: [storeId], references: [id])
+  storeId             String          @db.Uuid
+
+  products            Product[]      
+
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+
+  @@index([storeId])
+}
+
+model Customer {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  firstName   String
+  lastName    String
+  email       String    @unique
+  phone       String?
+  address     Json?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
