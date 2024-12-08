@@ -8,8 +8,8 @@ import Image from "next/image"
 import InputField from "../global/InputField"
 import { useMutation } from "@tanstack/react-query"
 import { createChapaSubAccount, getPlanWithPricing } from "@/lib/actions/dbFunctions"
-import { handleStatus } from "@/lib/utils"
 import { useToast } from "@/hooks/use-toast"
+import { handleStatus } from "@/lib/handler"
 
 const banks = [
     {

@@ -93,5 +93,5 @@
 }
 
 .my-toggle-group .toggle-item[data-state="on"] {
-  @apply bg-purple-700 /* Selected state */
+  @apply bg-gray-200 /* Selected state */
 }

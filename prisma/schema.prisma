@@ -36,44 +36,43 @@ enum SubscriptionStatus {
 }
 
 model User {
-  id                  String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  clerkId             String          @unique
-  email               String          @unique
-  firstName           String?
-  lastName            String?
-  imageUrl            String?
-  createdAt           DateTime        @default(now())
-  updatedAt           DateTime        @updatedAt
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  clerkId   String   @unique
+  email     String   @unique
+  firstName String?
+  lastName  String?
+  imageUrl  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  isPaid              Boolean         @default(false)
-  chapaSubAccountId   String?         @unique
-  saleType            SaleType?
-  isActive            Boolean         @default(false)
-  
-  subscription        Subscription[]
-  billingHistory      BillingHistory[]
-  stores              Store[]
+  isPaid            Boolean   @default(false)
+  chapaSubAccountId String?   @unique
+  saleType          SaleType?
+  isActive          Boolean   @default(false)
 
+  subscription   Subscription[]
+  billingHistory BillingHistory[]
+  stores         Store[]
 }
 
 model Subscription {
-  id                String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  user              User                    @relation(fields: [userId], references: [id])
-  userId            String                  @db.Uuid
+  id     String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user   User   @relation(fields: [userId], references: [id])
+  userId String @db.Uuid
 
-  plan              Plan?                    @relation(fields: [planId], references: [id])
-  planId            String?                  @db.Uuid
+  plan   Plan?   @relation(fields: [planId], references: [id])
+  planId String? @db.Uuid
 
-  pricing           Pricing?                 @relation(fields: [pricingId], references: [id])
-  pricingId         String?                  @db.Uuid
+  pricing   Pricing? @relation(fields: [pricingId], references: [id])
+  pricingId String?  @db.Uuid
 
-  status            SubscriptionStatus      @default(TRIAL)
+  status SubscriptionStatus @default(TRIAL)
 
-  startDate         DateTime                
-  trialEndDate      DateTime
-  endDate           DateTime?                // Set based on frequency and payment date
+  startDate    DateTime
+  trialEndDate DateTime
+  endDate      DateTime? // Set based on frequency and payment date
 
-  billingHistories  BillingHistory[]
+  billingHistories BillingHistory[]
 
   @@index([userId])
   @@index([planId])
@@ -82,136 +81,164 @@ model Subscription {
 }
 
 model Plan {
-  id                String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name              PlanType         @unique
-  description       String?
-  features          String[]
-  pricing           Pricing[]
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        PlanType  @unique
+  description String?
+  features    String[]
+  pricing     Pricing[]
 
-  subscriptions     Subscription[]
+  subscriptions Subscription[]
 
   @@map("plans")
 }
 
 model Pricing {
-  id                String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
 
-  plan              Plan                    @relation(fields: [planId], references: [id])
-  planId            String                  @db.Uuid
+  plan   Plan   @relation(fields: [planId], references: [id])
+  planId String @db.Uuid
 
-  frequency         SubscriptionFrequency
-  price             Float                   // Price in chosen currency (e.g., USD)
-  splitValue        Float?
+  frequency  SubscriptionFrequency
+  price      Float // Price in chosen currency (e.g., USD)
+  splitValue Float?
 
-  subscriptions     Subscription[]
+  subscriptions Subscription[]
 
   @@unique([planId, frequency])
   @@map("pricings")
 }
 
 model BillingHistory {
-  id                String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  user              User                    @relation(fields: [userId], references: [id])
-  userId            String                  @db.Uuid
+  id     String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user   User   @relation(fields: [userId], references: [id])
+  userId String @db.Uuid
 
-  subscription      Subscription            @relation(fields: [subscriptionId], references: [id])
-  subscriptionId    String                  @db.Uuid
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id])
+  subscriptionId String       @db.Uuid
 
-  amount            Float                   // Amount charged (e.g., based on Pricing)
-  
-  paymentDate       DateTime                @default(now())
-  paymentMethod     String                  // "Chapa"
-  transactionId     String?                 // Transaction ID from Chapa
+  amount Float // Amount charged (e.g., based on Pricing)
+
+  paymentDate   DateTime @default(now())
+  paymentMethod String // "Chapa"
+  transactionId String? // Transaction ID from Chapa
 
   @@index([userId])
   @@index([subscriptionId])
   @@map("billing_histories")
 }
 
-
-
 model Store {
-  id                String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name              String
-  description       String?
-  email             String?
-  phone             String
-  domain            String        @unique
+  id          String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String
+  description String?
+  email       String?
+  phone       String
+  domain      String  @unique
 
-  owner             User          @relation(fields: [ownerId], references: [id])
-  ownerId           String        @db.Uuid
+  owner   User   @relation(fields: [ownerId], references: [id])
+  ownerId String @db.Uuid
 
-  convexOrderIds    String[]      // Array of Convex order IDs associated with this store
+  convexOrderIds String[] // Array of Convex order IDs associated with this store
 
-  logo              String?
-  favicon           String?
-  selectedTemplate  String?
-  isPublished       Boolean       @default(false)
+  logo             String?
+  favicon          String?
+  selectedTemplate String?
+  isPublished      Boolean @default(false)
 
-  products          Product[]
-  collections       Collection[]
-  
-  socialLinks       Json?
+  products    Product[]
+  collections Collection[]
+  media       Media[]
 
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
+  socialLinks Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([ownerId])
 }
 
 model Product {
-  id                  String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name                String
-  description         String?
-  media               String[]     // Array of Cloudinary image IDs
-  category            String?
-  price               Float
-  comparePrice        Float?
-  profit              Float?
-  stock               Int
-  soldCount           Int          @default(0)
-  quantity            Int
-  sku                 String?      @unique
-  isPublished         Boolean      @default(false)
+  id           String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name         String
+  description  String?
+  media        Json // Array of imageKit response value max 2 min 1
+  price        Float
+  comparePrice Float?
+  profit       Float?
+  cost         Float
+  margin       String
+  isPublished  Boolean @default(false)
+  category     String?
+  stock        Int
+  sku          String? @unique
 
-  store               Store        @relation(fields: [storeId], references: [id])
-  storeId             String        @db.Uuid
+  collection Collection[] // Many-to-Many Relationship with Collection
+  variant    Variant[]
 
-  collections         Collection[] // Many-to-Many Relationship with Collection
+  store   Store  @relation(fields: [storeId], references: [id])
+  storeId String @db.Uuid
 
-  convexOrderItemIds  String[]     // Array of Convex order item IDs associated with this product
+  convexOrderItemIds String[] // Array of Convex order item IDs associated with this product
 
-  createdAt           DateTime     @default(now())
-  updatedAt           DateTime     @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([storeId])
+}
+
+model Media {
+  id           String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  fileId       String
+  name         String
+  filePath     String
+  thumbnailUrl String
+  url          String
+
+  store   Store  @relation(fields: [storeId], references: [id])
+  storeId String @db.Uuid
 }
 
 model Collection {
-  id                  String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name                String
-  slug                String        @unique
-  description         String?
-  isActive            Boolean       @default(true)
+  id          String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String
+  description String?
+  isActive    Boolean @default(true)
 
-  store               Store          @relation(fields: [storeId], references: [id])
-  storeId             String          @db.Uuid
+  store   Store  @relation(fields: [storeId], references: [id])
+  storeId String @db.Uuid
 
-  products            Product[]      
+  products Product[]
 
-  createdAt           DateTime        @default(now())
-  updatedAt           DateTime        @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([storeId])
 }
 
+model Variant {
+  id        String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  product   Product     @relation(fields: [productId], references: [id])
+  productId String      @db.Uuid
+  type      String
+  attribute Attribute[]
+}
+
+model Attribute {
+  id        String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  variant   Variant @relation(fields: [variantId], references: [id])
+  variantId String  @db.Uuid
+  name      String
+  price     Float
+  stock     Int
+}
+
 model Customer {
-  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  firstName   String
-  lastName    String
-  email       String    @unique
-  phone       String?
-  address     Json?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  firstName String
+  lastName  String
+  email     String   @unique
+  phone     String?
+  address   Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

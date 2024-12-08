@@ -1,5 +1,5 @@
 import { verifyUser } from '@/lib/actions/user.action'
-import { handleStatus } from '@/lib/utils'
+import { handleStatus } from '@/lib/handler'
 import { Circle } from 'lucide-react'
 import React from 'react'
 
