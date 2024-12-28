@@ -1,6 +1,6 @@
 "use client"
 
-import { Check, ChevronsUpDown, Loader2 } from "lucide-react"
+import { Check, ChevronsUpDown, Loader2, Plus } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { Button } from "../ui/button"
@@ -19,47 +19,26 @@ import {
 } from "../ui/popover"
 import { useEffect, useState } from "react"
 import { handleStatus } from "@/lib/handler"
-import { getAllCollections } from "@/lib/actions/collection.action"
+import { getAllProduct } from "@/lib/actions/product.action"
+import Image from "next/image"
 
-const frameworks = [
-    {
-        value: "next.js",
-        label: "Next.js",
-    },
-    {
-        value: "sveltekit",
-        label: "SvelteKit",
-    },
-    {
-        value: "nuxt.js",
-        label: "Nuxt.js",
-    },
-    {
-        value: "remix",
-        label: "Remix",
-    },
-    {
-        value: "astro",
-        label: "Astro",
-    },
-]
 
-export default function CollectionDropDown({selectedCollection, setSelectedCollection, storeId}) {
+export default function ProductDropdown({selectedProduct, storeId}) {
     const [open, setOpen] = useState(false)
     const [value, setValue] = useState("")
-    const [collections, setCollections] = useState(null)
+    const [products, setProducts] = useState(null)
     const [isLoading, setIsLoading] = useState(false)
 
     useEffect(() => {
-        async function fetchingCollection() {
+        async function fetchingProduct() {
             setIsLoading(true)
-            const {status, data: collectionData} = await getAllCollections(storeId)
+            const {status, data: productsData} = await getAllProduct(storeId)
             handleStatus(status)
-            setCollections(collectionData)
+            setProducts(productsData)
             setIsLoading(false)
         }
         if (open) {
-            fetchingCollection()
+            fetchingProduct()
         }
     }, [open])
 
@@ -71,41 +50,49 @@ export default function CollectionDropDown({selectedCollection, setSelectedColle
                     variant="outline"
                     role="combobox"
                     aria-expanded={open}
-                    className="w-[200px] justify-between"
+                    className="w-2/4 justify-between"
                 >
-                    {value
-                        ? collections.find((collection) => collection.id === value).name
-                        : "Select collection"}
-                    <ChevronsUpDown className="opacity-50" />
+                    {/* {value ? (
+                        products.find((product) => product.id === value).name
+                    ) : ( */}
+                        <span className="flex items-center gap-2">
+                            <Plus/>
+                            Add product
+                        </span>
+                    {/* )} */}
                 </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-[200px] p-0">
+            <PopoverContent className="w-full p-0">
                 {isLoading ? (
-                    <div className="size-full flex items-center justify-center">
+                    <div className="size-full flex items-center justify-center w-full">
                         <Loader2 className="animate-spin" />
                     </div>
                 ): (
-                    <Command>
+                    <Command >
                         <CommandInput placeholder="Search collection..." className="h-9" />
                         <CommandList>
-                            <CommandEmpty>There is no collection</CommandEmpty>
+                            <CommandEmpty>There is no Product</CommandEmpty>
                             <CommandGroup>
-                                {collections?.map((coll) => (
+                                {products?.map((prod) => (
                                     <CommandItem
-                                        key={coll.id}
-                                        value={coll.id}
+                                        key={prod.id}
+                                        value={prod.id}
                                         onSelect={(currentValue) => {
                                             setValue(currentValue === value ? "" : currentValue)
+                                            selectedProduct(prod)
                                             setOpen(false)
                                         }}
+                                        className="flex items-center gap-4 justify-between"
                                     >
-                                        {coll.name}
-                                        <Check
+                                        <Image src={prod.media[0].thumbnailUrl} alt="thumbnailUrl" width={50} height={50} className="size-10 object-cover" />
+                                        <p className="font-semibold">{prod.name}</p>
+                                        <p className={prod.isPublished ? "bg-green-500 rounded-full p-1 px-2" : "bg-red-500 rounded-full p-1 px-2"}>{prod.isPublished ? "Active" : "inActive"}</p>
+                                        {/* <Check
                                             className={cn(
                                                 "ml-auto",
-                                                value === coll.id ? "opacity-100" : "opacity-0"
+                                                value === prod.id ? "opacity-100" : "opacity-0"
                                             )}
-                                        />
+                                        /> */}
                                     </CommandItem>
                                 ))}
                             </CommandGroup>

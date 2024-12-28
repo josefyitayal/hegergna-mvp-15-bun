@@ -25,12 +25,13 @@ import { createProduct } from '@/lib/actions/product.action'
 import { useMutation } from '@tanstack/react-query'
 import { redirect } from 'next/dist/server/api-utils'
 import { handleStatus } from '@/lib/handler'
+import { Checkbox } from '@/components/ui/checkbox'
 
 
 const variantLists = ["Size", "Color", "Material", "Capacity", "Flavor", "Weight", "Length"]
 
 function page({ params }) {
-  const { storeId, userId } = use(params)
+  const { userId, storeId } = use(params)
   //basic
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
@@ -45,6 +46,7 @@ function page({ params }) {
   const [isPublish, setIsPublish] = useState(false)
   const [category, setCategory] = useState("")
   const [stock, setStock] = useState(0)
+  const [isGenerateSKU, setIsGenerateSKU] = useState(false)
   const [sku, setSku] = useState("")
   //variant and collection
   const [collections, setCollections] = useState(null)
@@ -63,26 +65,48 @@ function page({ params }) {
     calculatingMargin()
   }, [cost, price])
 
-  const { data, error, mutate } = useMutation({
-    mutationKey: ["createProduct"],
-    mutationFn: async ({ storeId, title, description, images, price, comparePrice, profit, cost, margin, isPublish, category, stock, sku, collections, variants }) => {
-      setIsLoading(true)
-      const { status, data } = await createProduct(storeId, title, description, images, price, comparePrice, profit, cost, margin, isPublish, category, stock, sku, collections, variants)
-      console.log(status, "======== this is status")
-      handleStatus(status)
-      setIsLoading(false)
-      if (data) return data
-    }
-  })
+  // const { data, error, mutate } = useMutation({
+  //   mutationKey: ["createProduct"],
+  //   mutationFn: async ({ storeId, title, description, images, price, comparePrice, profit, cost, margin, isPublish, category, stock, sku, collections, variants }) => {
+  //     setIsLoading(true)
+  //     const { status, data } = await createProduct(storeId, title, description, images, price, comparePrice, profit, cost, margin, isPublish, category, stock, sku, collections, variants)
+  //     console.log(status, "======== this is status")
+  //     handleStatus(status)
+  //     setIsLoading(false)
+  //     if (data) return data
+  //   }
+  // })
 
-  if (error) {
-    console.log("this is from useMutation error trying to save product")
-    throw error
+  // if (error) {
+  //   console.log("this is from useMutation error trying to save product")
+  //   throw error
+  // }
+
+  function generateSKU() {
+    // Get the current year and month
+    const date = new Date();
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0'); // Pad month with leading zero if needed
+
+    // Remove spaces and convert to uppercase
+    const formattedCategory = category.replace(/\s+/g, '').toUpperCase();
+    const formattedName = title.replace(/\s+/g, '').toUpperCase();
+
+    // Combine the formatted strings to create the SKU
+    const sku = `${formattedCategory}-${formattedName}-${year}-${month}`;
+    console.log(sku, "from sku generator")
+    return sku;
   }
 
-  function handleProductSave() {
+  async function handleProductSave() {
+    setIsLoading(true)
+    let newSku = sku; 
+    if (isGenerateSKU) { 
+      newSku = generateSKU(); 
+      setSku(newSku); 
+    }
     const validationResult = productZodSchema.safeParse(
-      { title, description, media: images, price: parseFloat(price), comparePrice: parseFloat(comparePrice), profit: parseFloat(profit), cost: parseFloat(cost), margin, isPublish, category, stock: parseFloat(stock), sku, collections, variants }
+      { title, description, media: images, price: parseFloat(price), comparePrice: parseFloat(comparePrice), profit: parseFloat(profit), cost: parseFloat(cost), margin, isPublish, category, stock: parseFloat(stock), newSku, collections, variants }
     )
     if (!validationResult.success) {
       // Handle validation errors
@@ -91,13 +115,20 @@ function page({ params }) {
         description: validationResult.error.error,
         variant: "destructive",
       });
-      console.error('Validation failed:', validationResult.error.errors);
+      console.error('Validation failed:', validationResult.error);
       // throw new Error('Validation failed');
     }
-    mutate({ storeId, title, description, images, price, comparePrice, profit, cost, margin, isPublish, category, stock, sku, collections, variants })
+    // mutate({ storeId, title, description, images, price, comparePrice, profit, cost, margin, isPublish, category, stock, sku, collections, variants })
+    console.log(newSku)
+    const { status, data } = await createProduct(storeId, title, description, images, price, comparePrice, profit, cost, margin, isPublish, category, stock, newSku, collections, variants)
+    handleStatus(status)
+    setIsLoading(false)
+    if (data) {
+      // TODO the redirect not working but any thing is working i think
+      redirect(`/dashboard/${userId}/${storeId}/products`)
+    }
 
   }
-  if (data) return redirect(`/dashboard/${userId}/${storeId}/products`)
 
 
   return (
@@ -108,7 +139,7 @@ function page({ params }) {
           Add product
         </div>
         <Button onClick={handleProductSave}>
-          {isLoading ? (<Loader2 className='animate-spin' />) : ('Save')}
+          {isLoading ? (<><Loader2 className='animate-spin' /> Saving</>) : ('Save')}
         </Button>
       </div>
 
@@ -149,7 +180,11 @@ function page({ params }) {
             </SelectContent>
           </Select>
           <InputField label={"Stock"} type={"number"} value={stock} onChange={(e) => setStock(e.target.value)} hint='How many product you have on hand' />
-          <InputField label={"SKU"} type={"text"} value={sku} onChange={(e) => setSku(e.target.value)} optional hint='A unique identifier for each product or variant in your inventory.' />
+          <div className='flex items-center gap-2'>
+            <Checkbox checked={isGenerateSKU} onCheckedChange={() => setIsGenerateSKU((prev) => !prev)} />
+            <p>Generate SKU</p>
+          </div>
+          <InputField label={"SKU"} type={"text"} disabled={isGenerateSKU} value={sku} onChange={(e) => setSku(e.target.value)} optional hint='A unique identifier for each product or variant in your inventory.' />
           <CategoryDropdown selectedCategory={category} setSelectedCategory={setCategory} />
         </div>
 
@@ -169,7 +204,7 @@ function page({ params }) {
         <div className='flex flex-col gap-2 bg-white shadow-sm rounded-md p-5'>
           <p className='heading-3'>Collection and Variant</p>
           <p className='pl-[10px] text-gray-500'>Add Collection</p>
-          <CollectionDropDown selectedCollection={collections} setSelectedCollection={setCollections} />
+          <CollectionDropDown selectedCollection={collections} setSelectedCollection={setCollections} storeId={storeId} />
           <p className='pl-[10px] text-gray-500'>Add variant</p>
           <VariantForm variants={variants} setVariants={setVariants} />
         </div>
